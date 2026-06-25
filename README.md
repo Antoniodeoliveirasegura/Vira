@@ -1,36 +1,47 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Vira
 
-## Getting Started
+**Capture first. Organize later.**
 
-First, run the development server:
+Vira is a single-user "capture-first" inbox. You dump a raw thought into one box and Claude turns it into a structured item (task, idea, link, reminder, note, or question) with a clean title and metadata, so capturing never breaks your flow. It also reads your Google Calendar and uses Claude to suggest how to spend your day.
+
+## Features
+
+- **One-box capture** — type anything; Claude classifies it into `task | idea | link | reminder | note | question`, extracts a title, and pulls structured metadata (URLs, due dates).
+- **AI day suggestion** — given today's calendar events and your open tasks, Claude writes one short, useful suggestion (a free gap to fill, what to prioritize, an unusually heavy day).
+- **Google Calendar sync** — OAuth refresh-token flow; today's events shown inline.
+- **Single-user auth** — password gate with a signed session, no public sign-up.
+
+## Stack
+
+- **Next.js 16** (App Router) + **React 19** + **TypeScript**
+- **Tailwind CSS v4**
+- **Supabase** for storage and the OAuth token vault (`@supabase/ssr`)
+- **Claude** via `@anthropic-ai/sdk` (Haiku for classification and suggestions)
+
+## Getting started
 
 ```bash
+npm install
+cp .env.example .env.local   # then fill in the values
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000).
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## Environment
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+All secrets are read from the environment, see [.env.example](.env.example) for the full list:
 
-## Learn More
+| Variable | Purpose |
+|---|---|
+| `ANTHROPIC_API_KEY` | Claude API key (classification + day suggestions) |
+| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase project (anon/public key only) |
+| `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Google OAuth for Calendar access |
+| `APP_PASSWORD` | Single-user login password |
+| `APP_SESSION_SECRET` | Secret used to sign the session cookie |
 
-To learn more about Next.js, take a look at the following resources:
+Supabase tables expected: `items` (captured items) and `google_tokens` (the Google refresh token).
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+## Notes
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+This is a personal project (v0.2). Auth is intentionally single-user, the Supabase **anon** key is the only client-side credential, and all privileged calls run server-side through Next.js route handlers.
