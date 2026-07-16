@@ -1,6 +1,8 @@
 'use client';
 
+import { useState } from 'react';
 import { Item } from '@/lib/supabase';
+import { bucketFor, dueLabel } from '@/lib/reminders';
 
 const TYPE_STYLES: Record<Item['type'], { badge: string; dot: string }> = {
   task:     { badge: 'bg-blue-500/10 text-blue-300 ring-blue-500/20',       dot: 'bg-blue-400' },
@@ -11,11 +13,12 @@ const TYPE_STYLES: Record<Item['type'], { badge: string; dot: string }> = {
   question: { badge: 'bg-teal-500/10 text-teal-300 ring-teal-500/20',       dot: 'bg-teal-400' },
 };
 
+const ALL_TYPES: Item['type'][] = ['task', 'reminder', 'question', 'idea', 'link', 'note'];
+
 function formatTime(iso: string) {
   const date = new Date(iso);
   const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
-  const diffMin = Math.floor(diffMs / 60000);
+  const diffMin = Math.floor((now.getTime() - date.getTime()) / 60000);
   const diffHr = Math.floor(diffMin / 60);
   const diffDay = Math.floor(diffHr / 24);
 
@@ -28,13 +31,35 @@ function formatTime(iso: string) {
 
 type Props = {
   item: Item;
-  onStatusChange: (id: string, status: 'done' | 'open') => void;
+  onUpdate: (id: string, updates: Partial<Item>) => void;
   onDelete: (id: string) => void;
+  now?: Date;
 };
 
-export default function ItemCard({ item, onStatusChange, onDelete }: Props) {
+export default function ItemCard({ item, onUpdate, onDelete, now }: Props) {
   const isDone = item.status === 'done';
   const style = TYPE_STYLES[item.type];
+  const at = now ?? new Date();
+  const bucket = bucketFor(item, at);
+  const showDue =
+    item.status === 'open' &&
+    !!item.metadata.due_date &&
+    (item.type === 'task' || item.type === 'reminder');
+
+  const [editing, setEditing] = useState(false);
+  const [draft, setDraft] = useState(item.title);
+  const [menuOpen, setMenuOpen] = useState(false);
+
+  function startEdit() {
+    setDraft(item.title);
+    setEditing(true);
+  }
+
+  function saveTitle() {
+    setEditing(false);
+    const t = draft.trim();
+    if (t && t !== item.title) onUpdate(item.id, { title: t });
+  }
 
   return (
     <div
@@ -44,7 +69,7 @@ export default function ItemCard({ item, onStatusChange, onDelete }: Props) {
     >
       {item.type === 'task' ? (
         <button
-          onClick={() => onStatusChange(item.id, isDone ? 'open' : 'done')}
+          onClick={() => onUpdate(item.id, { status: isDone ? 'open' : 'done' })}
           className={`mt-0.5 flex h-5 w-5 flex-shrink-0 items-center justify-center rounded-md border transition-all ${
             isDone
               ? 'border-violet-500 bg-violet-500 text-white'
@@ -63,43 +88,107 @@ export default function ItemCard({ item, onStatusChange, onDelete }: Props) {
       )}
 
       <div className="min-w-0 flex-1">
-        <p className={`text-[15px] leading-snug text-zinc-100 ${isDone ? 'line-through' : ''}`}>
-          {item.type === 'link' && item.metadata.url ? (
-            <a
-              href={item.metadata.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-violet-300 underline decoration-violet-500/40 underline-offset-4 transition-colors hover:text-violet-200 hover:decoration-violet-400"
-            >
-              {item.title}
-            </a>
-          ) : (
-            item.title
-          )}
-        </p>
+        {editing ? (
+          <input
+            autoFocus
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            onBlur={saveTitle}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') saveTitle();
+              if (e.key === 'Escape') setEditing(false);
+            }}
+            className="w-full rounded-md border border-zinc-700 bg-zinc-950 px-2 py-1 text-[15px] leading-snug text-zinc-100 outline-none focus:border-violet-500"
+          />
+        ) : (
+          <p className={`text-[15px] leading-snug text-zinc-100 ${isDone ? 'line-through' : ''}`}>
+            {item.type === 'link' && item.metadata.url ? (
+              <a
+                href={item.metadata.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-violet-300 underline decoration-violet-500/40 underline-offset-4 transition-colors hover:text-violet-200 hover:decoration-violet-400"
+              >
+                {item.title}
+              </a>
+            ) : (
+              item.title
+            )}
+          </p>
+        )}
 
         <div className="mt-2 flex flex-wrap items-center gap-2">
-          <span
-            className={`inline-flex items-center rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ring-1 ring-inset ${style.badge}`}
-          >
-            {item.type}
-          </span>
+          <div className="relative">
+            <button
+              onClick={() => setMenuOpen((o) => !o)}
+              className={`inline-flex items-center gap-1 rounded-md px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ring-1 ring-inset transition-opacity hover:opacity-80 ${style.badge}`}
+              aria-label="Change type"
+            >
+              {item.type}
+              <svg className="h-2.5 w-2.5 opacity-60" viewBox="0 0 10 10" fill="none">
+                <path d="M2 3.5L5 6.5L8 3.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            {menuOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setMenuOpen(false)} />
+                <div className="absolute left-0 top-full z-20 mt-1 w-32 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-xl">
+                  {ALL_TYPES.map((t) => (
+                    <button
+                      key={t}
+                      onClick={() => {
+                        setMenuOpen(false);
+                        if (t !== item.type) onUpdate(item.id, { type: t });
+                      }}
+                      className={`flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs capitalize transition-colors hover:bg-zinc-800 ${
+                        t === item.type ? 'text-zinc-100' : 'text-zinc-400'
+                      }`}
+                    >
+                      <span className={`h-1.5 w-1.5 rounded-full ${TYPE_STYLES[t].dot}`} />
+                      {t}
+                      {t === item.type && <span className="ml-auto text-violet-400">✓</span>}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+
           <span className="text-xs text-zinc-500">{formatTime(item.created_at)}</span>
-          {item.type === 'task' && item.metadata.due_date && (
-            <span className="text-xs text-blue-400">· due {item.metadata.due_date}</span>
+          {showDue && (
+            <span
+              className={`text-xs font-medium ${
+                bucket === 'overdue' ? 'text-rose-400' : bucket === 'today' ? 'text-amber-300' : 'text-blue-400'
+              }`}
+            >
+              · {dueLabel(item, at)}
+            </span>
           )}
         </div>
       </div>
 
-      <button
-        onClick={() => onDelete(item.id)}
-        className="flex h-6 w-6 flex-shrink-0 items-center justify-center rounded-md text-zinc-600 opacity-60 transition-all hover:bg-zinc-800 hover:text-rose-400 hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
-        aria-label="Delete item"
-      >
-        <svg className="h-3.5 w-3.5" viewBox="0 0 14 14" fill="none">
-          <path d="M3 3L11 11M11 3L3 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
-        </svg>
-      </button>
+      <div className="flex flex-shrink-0 items-center gap-1">
+        {!editing && (
+          <button
+            onClick={startEdit}
+            className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-600 opacity-60 transition-all hover:bg-zinc-800 hover:text-zinc-300 hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+            aria-label="Edit title"
+          >
+            <svg className="h-3.5 w-3.5" viewBox="0 0 14 14" fill="none">
+              <path d="M9.5 2.5L11.5 4.5L5 11H3V9L9.5 2.5Z" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        )}
+        <button
+          onClick={() => onDelete(item.id)}
+          className="flex h-6 w-6 items-center justify-center rounded-md text-zinc-600 opacity-60 transition-all hover:bg-zinc-800 hover:text-rose-400 hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100"
+          aria-label="Delete item"
+        >
+          <svg className="h-3.5 w-3.5" viewBox="0 0 14 14" fill="none">
+            <path d="M3 3L11 11M11 3L3 11" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+          </svg>
+        </button>
+      </div>
     </div>
   );
 }

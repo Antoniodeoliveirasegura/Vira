@@ -2,7 +2,9 @@
 
 import { useEffect, useState, useCallback } from 'react';
 import { getSupabase, Item } from '@/lib/supabase';
+import { dueNow } from '@/lib/reminders';
 import ItemCard from './ItemCard';
+import DueSection from './DueSection';
 
 const TYPE_ORDER: Item['type'][] = ['task', 'reminder', 'question', 'idea', 'link', 'note'];
 
@@ -22,6 +24,13 @@ type Props = {
 export default function ItemList({ newItem }: Props) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
+  const [now, setNow] = useState(() => new Date());
+
+  // Re-tick every minute so due buckets, labels, and notifications stay current.
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const fetchItems = useCallback(async () => {
     const { data } = await getSupabase()
@@ -44,12 +53,12 @@ export default function ItemList({ newItem }: Props) {
     });
   }, [newItem]);
 
-  async function handleStatusChange(id: string, status: 'done' | 'open') {
-    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, status } : i)));
+  async function handleUpdate(id: string, updates: Partial<Item>) {
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, ...updates } : i)));
     await fetch('/api/items', {
       method: 'PATCH',
       headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ id, status }),
+      body: JSON.stringify({ id, ...updates }),
     });
   }
 
@@ -76,9 +85,13 @@ export default function ItemList({ newItem }: Props) {
     );
   }
 
-  // Group items by type, tasks: open first then done
+  // Overdue + due-today items get pinned to the top; the rest stay grouped by type.
+  const due = dueNow(items, now);
+  const dueIds = new Set(due.map((i) => i.id));
+  const rest = items.filter((i) => !dueIds.has(i.id));
+
   const grouped: Partial<Record<Item['type'], Item[]>> = {};
-  for (const item of items) {
+  for (const item of rest) {
     if (!grouped[item.type]) grouped[item.type] = [];
     grouped[item.type]!.push(item);
   }
@@ -93,6 +106,7 @@ export default function ItemList({ newItem }: Props) {
 
   return (
     <div className="space-y-10">
+      <DueSection due={due} now={now} onUpdate={handleUpdate} onDelete={handleDelete} />
       {TYPE_ORDER.filter((type) => grouped[type]?.length).map((type) => (
         <section key={type}>
           <h2 className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-500">
@@ -106,7 +120,8 @@ export default function ItemList({ newItem }: Props) {
               <ItemCard
                 key={item.id}
                 item={item}
-                onStatusChange={handleStatusChange}
+                now={now}
+                onUpdate={handleUpdate}
                 onDelete={handleDelete}
               />
             ))}

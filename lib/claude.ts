@@ -55,10 +55,13 @@ export async function classify(rawInput: string): Promise<ClassifyResult> {
   };
 
   try {
+    const when = new Date().toString();
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 300,
       system: `You classify user notes into structured items. Respond with ONLY a JSON object, no markdown, no explanation.
+
+The current date and time is ${when}. Resolve relative dates ("today", "tomorrow", "next Friday", "in 2 hours") against it, and express any due_date in that same local timezone as an ISO 8601 string WITHOUT a "Z" suffix — "YYYY-MM-DD" for a day, "YYYY-MM-DDTHH:MM" for a specific time.
 
 The JSON must have exactly these fields:
 - "type": one of task|idea|link|reminder|note|question
@@ -67,8 +70,8 @@ The JSON must have exactly these fields:
 
 Classification rules:
 - "link" if the input contains a URL → add {"url": "<the url>"} to metadata
-- "task" if it describes an action to take → if an explicit date is stated, add {"due_date": "<ISO date>"} to metadata; never invent a date
-- "reminder" if it's time-anchored but not an action
+- "task" if it describes an action to take → if a date or time is stated, add {"due_date": "<ISO 8601 date or datetime>"} to metadata; never invent one
+- "reminder" if it's time-anchored but not an action → if a date or time is stated, add {"due_date": "<ISO 8601 date or datetime>"} to metadata; never invent one
 - "question" if it's something to research or find out
 - "idea" for thoughts, concepts, or brainstorms
 - "note" as the fallback when nothing else fits
