@@ -5,6 +5,7 @@ import CaptureBox from '@/components/CaptureBox';
 import ItemList from '@/components/ItemList';
 import CalendarStrip from '@/components/CalendarStrip';
 import DaySuggestion from '@/components/DaySuggestion';
+import SearchBox from '@/components/SearchBox';
 import { Item } from '@/lib/supabase';
 
 export default function Home() {
@@ -36,6 +37,8 @@ export default function Home() {
         <div className="mb-6">
           <DaySuggestion />
         </div>
+
+        <SearchBox />
 
         <CaptureBox onCapture={setLatestItem} />
 
