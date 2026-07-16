@@ -20,4 +20,5 @@ export type Item = {
   title: string;
   status: 'open' | 'done' | 'archived';
   metadata: Record<string, string>;
+  last_surfaced_at?: string | null; // set when shown in the daily resurface review
 };

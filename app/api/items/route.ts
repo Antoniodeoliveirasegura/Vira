@@ -34,6 +34,9 @@ export async function PATCH(req: NextRequest) {
     }
     updates.title = title.slice(0, 200);
   }
+  if (body.surfaced === true) {
+    updates.last_surfaced_at = new Date().toISOString(); // server-authoritative timestamp
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'no editable fields provided' }, { status: 400 });

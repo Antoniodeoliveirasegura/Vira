@@ -3,8 +3,10 @@
 import { useEffect, useState, useCallback } from 'react';
 import { getSupabase, Item } from '@/lib/supabase';
 import { dueNow } from '@/lib/reminders';
+import { resurfaceCandidates } from '@/lib/resurface';
 import ItemCard from './ItemCard';
 import DueSection from './DueSection';
+import ResurfacePanel from './ResurfacePanel';
 
 const TYPE_ORDER: Item['type'][] = ['task', 'reminder', 'question', 'idea', 'link', 'note'];
 
@@ -67,6 +69,17 @@ export default function ItemList({ newItem }: Props) {
     await fetch(`/api/items?id=${id}`, { method: 'DELETE' });
   }
 
+  // "Keep" from the resurface review — stamp last_surfaced_at so it rests for a week.
+  async function handleSurface(id: string) {
+    const iso = new Date().toISOString();
+    setItems((prev) => prev.map((i) => (i.id === id ? { ...i, last_surfaced_at: iso } : i)));
+    await fetch('/api/items', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, surfaced: true }),
+    });
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-2 py-12 text-sm text-zinc-600">
@@ -89,6 +102,7 @@ export default function ItemList({ newItem }: Props) {
   const due = dueNow(items, now);
   const dueIds = new Set(due.map((i) => i.id));
   const rest = items.filter((i) => !dueIds.has(i.id));
+  const resurface = resurfaceCandidates(items, now);
 
   const grouped: Partial<Record<Item['type'], Item[]>> = {};
   for (const item of rest) {
@@ -107,6 +121,11 @@ export default function ItemList({ newItem }: Props) {
   return (
     <div className="space-y-10">
       <DueSection due={due} now={now} onUpdate={handleUpdate} onDelete={handleDelete} />
+      <ResurfacePanel
+        candidates={resurface}
+        onSurface={handleSurface}
+        onArchive={(id) => handleUpdate(id, { status: 'archived' })}
+      />
       {TYPE_ORDER.filter((type) => grouped[type]?.length).map((type) => (
         <section key={type}>
           <h2 className="mb-3 flex items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-500">
