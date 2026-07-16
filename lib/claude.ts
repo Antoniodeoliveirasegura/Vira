@@ -90,3 +90,35 @@ Return only the raw JSON object.`,
     return fallback;
   }
 }
+
+type MatchLite = { title: string; raw_input: string; type: string };
+
+/**
+ * Synthesize a short answer to `query` from the user's own matched notes. On-demand
+ * only (not per search) and capped, so the Claude cost stays tiny. Grounds strictly in
+ * the provided notes and cites them by number; returns '' on empty input or failure.
+ */
+export async function answerFromMatches(query: string, matches: MatchLite[]): Promise<string> {
+  if (!matches.length) return '';
+
+  try {
+    const notes = matches
+      .map((m, i) => {
+        const detail = m.raw_input && m.raw_input !== m.title ? ` — ${m.raw_input}` : '';
+        return `[${i + 1}] (${m.type}) ${m.title}${detail}`;
+      })
+      .join('\n');
+
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 300,
+      system: `Answer the user's question using ONLY their saved notes below. Be concise — 1-3 sentences, plain text, no preamble. Cite the note(s) you used by bracketed number, e.g. [2]. If the notes don't actually answer the question, say so in one sentence.`,
+      messages: [{ role: 'user', content: `Question: ${query}\n\nMy saved notes:\n${notes}` }],
+    });
+
+    return response.content[0].type === 'text' ? response.content[0].text.trim() : '';
+  } catch (e) {
+    console.error('answerFromMatches error:', e);
+    return '';
+  }
+}
