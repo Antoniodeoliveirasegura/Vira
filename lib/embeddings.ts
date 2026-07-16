@@ -2,7 +2,9 @@
 // external model in Vira. All current Voyage models output 1024 dims.
 
 const VOYAGE_URL = 'https://api.voyageai.com/v1/embeddings';
-const MODEL = 'voyage-3.5-lite';
+// voyage-4-lite: newest general text embedder, 1024-dim, and 200M free tokens
+// (voyage-3.5-lite has 0 free tokens — every call there is billed).
+const MODEL = 'voyage-4-lite';
 export const EMBED_DIMS = 1024;
 
 /**
