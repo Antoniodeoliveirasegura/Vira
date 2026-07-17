@@ -51,13 +51,13 @@ export function renderDigest(due: Item[], resurface: Item[], now: Date, appUrl?:
   </div>`;
 }
 
-/** Send the digest via Resend. Returns false (and logs) if unconfigured or on failure. */
-export async function sendDigest(due: Item[], resurface: Item[], now: Date): Promise<boolean> {
+/** The one Resend call, shared by every email Vira sends. False (and logs) if unconfigured/failed. */
+async function postEmail(subject: string, html: string): Promise<boolean> {
   const key = process.env.RESEND_API_KEY;
   const to = process.env.DIGEST_TO_EMAIL;
   const from = process.env.DIGEST_FROM_EMAIL || 'Vira <onboarding@resend.dev>';
   if (!key || !to) {
-    console.error('sendDigest: RESEND_API_KEY or DIGEST_TO_EMAIL not set');
+    console.error('email: RESEND_API_KEY or DIGEST_TO_EMAIL not set');
     return false;
   }
 
@@ -65,12 +65,7 @@ export async function sendDigest(due: Item[], resurface: Item[], now: Date): Pro
     const res = await fetch(RESEND_URL, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${key}` },
-      body: JSON.stringify({
-        from,
-        to,
-        subject: digestSubject(due, resurface),
-        html: renderDigest(due, resurface, now, process.env.APP_URL),
-      }),
+      body: JSON.stringify({ from, to, subject, html }),
     });
     if (!res.ok) {
       console.error('Resend send failed:', res.status, await res.text());
@@ -81,4 +76,27 @@ export async function sendDigest(due: Item[], resurface: Item[], now: Date): Pro
     console.error('Resend send error:', e);
     return false;
   }
+}
+
+/** Daily digest: due reminders + resurfacing candidates. */
+export async function sendDigest(due: Item[], resurface: Item[], now: Date): Promise<boolean> {
+  return postEmail(digestSubject(due, resurface), renderDigest(due, resurface, now, process.env.APP_URL));
+}
+
+/** Pure — wraps Claude's plain-text weekly review in the email shell. Preview-able without sending. */
+export function renderWeekly(reviewText: string, now: Date, appUrl?: string): string {
+  const week = now.toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+  const body = esc(reviewText).replace(/\n/g, '<br>');
+  const footer = appUrl ? `<a href="${esc(appUrl)}" style="color:#7c3aed;font-size:13px;">Open Vira →</a>` : '';
+  return `<div style="font-family:-apple-system,Segoe UI,sans-serif;max-width:520px;margin:0 auto;padding:8px;">
+    <div style="font-size:20px;font-weight:600;color:#18181b;">Your week in Vira</div>
+    <div style="font-size:12px;color:#a1a1aa;margin-bottom:12px;">week of ${week}</div>
+    <div style="font-size:14px;line-height:1.6;color:#27272a;">${body}</div>
+    <div style="margin-top:24px;">${footer}</div>
+  </div>`;
+}
+
+/** Weekly review email. */
+export async function sendWeekly(reviewText: string, now: Date): Promise<boolean> {
+  return postEmail('Vira · your weekly review', renderWeekly(reviewText, now, process.env.APP_URL));
 }

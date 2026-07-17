@@ -122,3 +122,43 @@ export async function answerFromMatches(query: string, matches: MatchLite[]): Pr
     return '';
   }
 }
+
+type Captured = { title: string; type: string };
+type OpenItem = { title: string; type: string; due: string };
+
+/**
+ * Weekly review: Claude reads the past week's captures and the current open pile and writes a
+ * short, actionable digest — what you captured, what's overdue, older items worth revisiting,
+ * and a few stale ones to kill-or-keep. Plain text (lib/email renders it). Returns '' on failure
+ * or an empty week.
+ * ponytail: Haiku for consistency + cost (one call/week); swap the model to Sonnet if the
+ * summary reads thin — it's a one-line change and this is the app's showcase AI moment.
+ */
+export async function weeklyReview(captured: Captured[], open: OpenItem[]): Promise<string> {
+  if (!captured.length && !open.length) return '';
+
+  try {
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 500,
+      system: `You write a person's weekly review for their personal capture inbox. Be concise and actionable: short sections with bullets, name specific items, and for stale ones suggest kill-or-keep. No preamble, no motivational filler. Plain text only — use "•" for bullets and a blank line between sections. Include these sections only when they have content: "This week you captured" (themes and counts, not a raw dump), "Overdue" (anything past due), "Worth revisiting" (older open ideas/notes/questions), "Kill or keep" (3-5 stale items to decide on). If there's very little to say, keep it to a sentence or two.`,
+      messages: [
+        {
+          role: 'user',
+          content: `Captured in the last 7 days:\n${
+            captured.length ? captured.map((c) => `- (${c.type}) ${c.title}`).join('\n') : '(nothing)'
+          }\n\nOpen items right now:\n${
+            open.length
+              ? open.map((o) => `- (${o.type}) ${o.title}${o.due ? ` [${o.due}]` : ''}`).join('\n')
+              : '(none)'
+          }`,
+        },
+      ],
+    });
+
+    return response.content[0].type === 'text' ? response.content[0].text.trim() : '';
+  } catch (e) {
+    console.error('weeklyReview error:', e);
+    return '';
+  }
+}
