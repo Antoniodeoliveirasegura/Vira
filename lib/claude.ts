@@ -162,3 +162,24 @@ export async function weeklyReview(captured: Captured[], open: OpenItem[]): Prom
     return '';
   }
 }
+
+/**
+ * One-line summary of a captured link, from the page's text. Turns naked URLs into a read-later
+ * shelf. Kept short and cheap (Haiku, ~1 sentence). Returns '' on failure — the caller degrades.
+ */
+export async function summarizeLink(url: string, pageText: string): Promise<string> {
+  try {
+    const response = await client.messages.create({
+      model: 'claude-haiku-4-5-20251001',
+      max_tokens: 120,
+      system: `Summarize the linked page in ONE concise sentence (max 25 words): what it is and why someone might have saved it. Plain text, no preamble, no quotes. If the text is too thin to tell, respond with the single word: SKIP`,
+      messages: [{ role: 'user', content: `URL: ${url}\n\nPage text:\n${pageText.slice(0, 4000)}` }],
+    });
+
+    const text = response.content[0].type === 'text' ? response.content[0].text.trim() : '';
+    return text === 'SKIP' ? '' : text;
+  } catch (e) {
+    console.error('summarizeLink error:', e);
+    return '';
+  }
+}

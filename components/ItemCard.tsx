@@ -117,6 +117,10 @@ export default function ItemCard({ item, onUpdate, onDelete, now }: Props) {
           </p>
         )}
 
+        {item.type === 'link' && item.metadata.summary && (
+          <p className="mt-1.5 text-[13px] leading-snug text-zinc-400">{item.metadata.summary}</p>
+        )}
+
         <div className="mt-2 flex flex-wrap items-center gap-2">
           <div className="relative">
             <button
