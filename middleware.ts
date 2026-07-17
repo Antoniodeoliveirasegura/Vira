@@ -4,7 +4,9 @@ import { isValidAuthCookie, COOKIE_NAME } from '@/lib/auth';
 // Paths that must work without an auth cookie.
 // /api/cron is reached by Vercel Cron with a Bearer token (not the login cookie); the
 // cron route enforces its own CRON_SECRET, so it opts out of the cookie gate here.
-const PUBLIC_PATHS = ['/login', '/api/login', '/api/cron'];
+// /manifest.webmanifest and /icons are fetched by the browser/OS without cookies during
+// PWA install — they must be public or the app won't be installable. (/share stays gated.)
+const PUBLIC_PATHS = ['/login', '/api/login', '/api/cron', '/manifest.webmanifest', '/icons'];
 
 function isPublic(pathname: string): boolean {
   return PUBLIC_PATHS.some((p) => pathname === p || pathname.startsWith(p + '/'));

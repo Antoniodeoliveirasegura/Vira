@@ -15,6 +15,8 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Vira",
   description: "Personal quick-capture productivity app",
+  // Launch fullscreen (no Safari chrome) when added to the iOS home screen.
+  appleWebApp: { capable: true, title: "Vira", statusBarStyle: "black-translucent" },
 };
 
 export const viewport: Viewport = {
