@@ -1,10 +1,11 @@
 # Vira — Status
 
-_Last updated: 2026-07-17_
+_Last updated: 2026-07-18 — feature roadmap complete._
 
-Single-user, capture-first productivity inbox. Type a thought → Claude classifies it →
-it's tagged, searchable, resurfaced, reminds you, summarizes the links you save, and (once
-deployed) emails you a daily digest + weekly review. See [roadmap.md](roadmap.md) for what's left.
+Single-user, capture-first productivity inbox. Type or dictate a thought → Claude classifies it →
+it's tagged, searchable, resurfaced, reminds you (snooze-able), summarizes the links you save,
+suggests when to slot tasks against your calendar, and (once deployed) emails you a daily digest +
+weekly review. See [roadmap.md](roadmap.md) for the original plan.
 
 ## Run it
 
@@ -57,6 +58,9 @@ Full roadmap "high-leverage" tier is done:
 | PWA + Android share target | `app/manifest.ts`, `app/icons/[size]/route.tsx`, `app/share/route.ts`, `lib/capture.ts` |
 | Auto-enrich links (AI summary) | `lib/enrich.ts`, `summarizeLink` in `lib/claude.ts`, `lib/capture.ts` |
 | Auto-tags + click-to-filter | `classify` in `lib/claude.ts`, `components/ItemCard.tsx`, `components/ItemList.tsx` |
+| Snooze until later | `lib/snooze.ts`, `app/api/items/route.ts`, `components/ItemCard.tsx`, `components/DueSection.tsx`, `components/ItemList.tsx` |
+| Voice capture (Web Speech) | `components/CaptureBox.tsx` |
+| Plan-my-day (calendar-gap slotting) | `lib/plan.ts`, `suggestDay` in `lib/claude.ts`, `app/api/day-suggestion/route.ts` |
 
 `lib/capture.ts` holds the shared capture core (classify + embed + insert), used by both the
 capture API and the share target. Cron routes (`/api/cron/*`) are exempt from the login gate in
@@ -72,11 +76,18 @@ The daily digest, weekly review, and Android "Share → Vira" only run on a depl
 3. In Vercel set all `.env.local` vars **plus** `RESEND_API_KEY`, `DIGEST_TO_EMAIL`, and a random `CRON_SECRET`.
    Crons auto-register from `vercel.json` (daily digest `0 12 * * *`, weekly review `0 13 * * 1` — 2 crons, within Hobby limits).
 
-## Next (nice-to-have tier, from roadmap)
+## What's left
 
-- **#10 Snooze / someday / recurring** — status + timestamp on reminders; complements what's built.
-- **#7 Voice capture** — mic → Web Speech → existing classify (Chrome-centric).
-- **#11 Plan-my-day** — calendar-gap suggestions (extends the day-suggestion you already ship).
+The roadmap's high-leverage tier (#1–6) and every nice-to-have (#7–11) are shipped. Only these
+deliberately-deferred pieces remain — pick up any of them later:
+
+- **Recurring reminders** — needs a small rule engine (the heavier half of roadmap #10).
+- **Someday bucket** — indefinite park, distinct from timed snooze (#10).
+- **Saved "spaces"** — pin a tag or search as an auto-populating view (#9 stretch).
+- **Calendar write-back** — actually create the time block; needs the `calendar.events` scope (#11's L version).
+- **Hosted Whisper** — higher-accuracy, cross-browser voice vs. the browser Web Speech API (#7's M version).
+
+Plus the one non-code to-do: **deploy to Vercel** (see above) to activate the digests + share target.
 
 ## Known loose ends
 
