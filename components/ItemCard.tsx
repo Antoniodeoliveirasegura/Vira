@@ -34,9 +34,11 @@ type Props = {
   onUpdate: (id: string, updates: Partial<Item>) => void;
   onDelete: (id: string) => void;
   now?: Date;
+  onTagClick?: (tag: string) => void;
+  activeTag?: string | null;
 };
 
-export default function ItemCard({ item, onUpdate, onDelete, now }: Props) {
+export default function ItemCard({ item, onUpdate, onDelete, now, onTagClick, activeTag }: Props) {
   const isDone = item.status === 'done';
   const style = TYPE_STYLES[item.type];
   const at = now ?? new Date();
@@ -45,6 +47,8 @@ export default function ItemCard({ item, onUpdate, onDelete, now }: Props) {
     item.status === 'open' &&
     !!item.metadata.due_date &&
     (item.type === 'task' || item.type === 'reminder');
+
+  const tags = (item.metadata.tags ?? '').split(',').map((t) => t.trim()).filter(Boolean);
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(item.title);
@@ -168,6 +172,20 @@ export default function ItemCard({ item, onUpdate, onDelete, now }: Props) {
               · {dueLabel(item, at)}
             </span>
           )}
+          {onTagClick &&
+            tags.map((tag) => (
+              <button
+                key={tag}
+                onClick={() => onTagClick(tag)}
+                className={`rounded-md px-1.5 py-0.5 text-[10px] font-medium transition-colors ${
+                  activeTag === tag
+                    ? 'bg-violet-500/20 text-violet-200'
+                    : 'bg-zinc-800/60 text-zinc-400 hover:bg-zinc-700/70 hover:text-zinc-200'
+                }`}
+              >
+                #{tag}
+              </button>
+            ))}
         </div>
       </div>
 

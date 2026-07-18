@@ -27,6 +27,7 @@ export default function ItemList({ newItem }: Props) {
   const [items, setItems] = useState<Item[]>([]);
   const [loading, setLoading] = useState(true);
   const [now, setNow] = useState(() => new Date());
+  const [activeTag, setActiveTag] = useState<string | null>(null);
 
   // Re-tick every minute so due buckets, labels, and notifications stay current.
   useEffect(() => {
@@ -98,6 +99,41 @@ export default function ItemList({ newItem }: Props) {
     );
   }
 
+  // Tag filter: a flat, chronological view of everything sharing one tag. Pinned due/resurface
+  // sections don't apply here — this is a focused "space" for that topic.
+  if (activeTag) {
+    const tagged = items.filter((i) =>
+      (i.metadata.tags ?? '').split(',').map((t) => t.trim()).includes(activeTag),
+    );
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center gap-2 text-sm">
+          <span className="rounded-md bg-violet-500/15 px-2 py-0.5 font-medium text-violet-200">#{activeTag}</span>
+          <span className="text-zinc-500">{tagged.length} item{tagged.length === 1 ? '' : 's'}</span>
+          <button
+            onClick={() => setActiveTag(null)}
+            className="ml-auto rounded-md px-2 py-0.5 text-xs text-zinc-500 transition-colors hover:bg-zinc-800 hover:text-zinc-300"
+          >
+            clear ✕
+          </button>
+        </div>
+        <div className="space-y-2">
+          {tagged.map((item) => (
+            <ItemCard
+              key={item.id}
+              item={item}
+              now={now}
+              onUpdate={handleUpdate}
+              onDelete={handleDelete}
+              onTagClick={setActiveTag}
+              activeTag={activeTag}
+            />
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   // Overdue + due-today items get pinned to the top; the rest stay grouped by type.
   const due = dueNow(items, now);
   const dueIds = new Set(due.map((i) => i.id));
@@ -142,6 +178,7 @@ export default function ItemList({ newItem }: Props) {
                 now={now}
                 onUpdate={handleUpdate}
                 onDelete={handleDelete}
+                onTagClick={setActiveTag}
               />
             ))}
           </div>

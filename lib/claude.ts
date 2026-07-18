@@ -47,6 +47,22 @@ export async function suggestDay(
   }
 }
 
+/** Normalize model-emitted tags: lowercase, de-hashed, comma-free, deduped, max 3. */
+function normalizeTags(raw: unknown): string[] {
+  if (!Array.isArray(raw)) return [];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const t of raw) {
+    const tag = String(t).toLowerCase().trim().replace(/[#,]/g, '').slice(0, 24);
+    if (tag && !seen.has(tag)) {
+      seen.add(tag);
+      out.push(tag);
+    }
+    if (out.length === 3) break;
+  }
+  return out;
+}
+
 export async function classify(rawInput: string): Promise<ClassifyResult> {
   const fallback: ClassifyResult = {
     type: 'note',
@@ -63,9 +79,10 @@ export async function classify(rawInput: string): Promise<ClassifyResult> {
 
 The current date and time is ${when}. Resolve relative dates ("today", "tomorrow", "next Friday", "in 2 hours") against it, and express any due_date in that same local timezone as an ISO 8601 string WITHOUT a "Z" suffix — "YYYY-MM-DD" for a day, "YYYY-MM-DDTHH:MM" for a specific time.
 
-The JSON must have exactly these fields:
+The JSON must have these fields:
 - "type": one of task|idea|link|reminder|note|question
 - "title": a 3-8 word title summarizing the note
+- "tags": an array of 1-3 short lowercase topic tags (single words or short phrases) capturing the subject — e.g. ["finance","taxes"]. Use [] if nothing is clearly on-topic.
 - "metadata": an object (can be empty {})
 
 Classification rules:
@@ -82,10 +99,17 @@ Return only the raw JSON object.`,
 
     const text = response.content[0].type === 'text' ? response.content[0].text : '';
     const cleaned = text.replace(/^```(?:json)?\n?/i, '').replace(/\n?```$/i, '').trim();
-    const parsed = JSON.parse(cleaned) as ClassifyResult;
+    const parsed = JSON.parse(cleaned) as ClassifyResult & { tags?: unknown };
 
     if (!parsed.type || !parsed.title) return fallback;
-    return parsed;
+
+    // Fold tags into metadata as a comma-joined string — fits the jsonb + Record<string,string>
+    // shape, so it stores, displays, and filters with no schema change.
+    const tags = normalizeTags(parsed.tags);
+    const metadata = tags.length
+      ? { ...(parsed.metadata ?? {}), tags: tags.join(',') }
+      : parsed.metadata ?? {};
+    return { type: parsed.type, title: parsed.title, metadata };
   } catch {
     return fallback;
   }
