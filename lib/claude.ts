@@ -53,7 +53,7 @@ export async function suggestDay(
 }
 
 /** Normalize model-emitted tags: lowercase, de-hashed, comma-free, deduped, max 3. */
-function normalizeTags(raw: unknown): string[] {
+export function normalizeTags(raw: unknown): string[] {
   if (!Array.isArray(raw)) return [];
   const seen = new Set<string>();
   const out: string[] = [];
