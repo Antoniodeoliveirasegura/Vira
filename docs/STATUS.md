@@ -3,8 +3,8 @@
 _Last updated: 2026-07-17_
 
 Single-user, capture-first productivity inbox. Type a thought → Claude classifies it →
-it's searchable, resurfaced, reminds you, and (once deployed) emails you a daily digest +
-weekly review. See [roadmap.md](roadmap.md) for what's left.
+it's tagged, searchable, resurfaced, reminds you, summarizes the links you save, and (once
+deployed) emails you a daily digest + weekly review. See [roadmap.md](roadmap.md) for what's left.
 
 ## Run it
 
@@ -55,6 +55,8 @@ Full roadmap "high-leverage" tier is done:
 | Email delivery channel (daily digest) | `lib/email.ts`, `app/api/cron/digest/route.ts`, `vercel.json` |
 | AI weekly review | `weeklyReview` in `lib/claude.ts`, `app/api/cron/weekly/route.ts` |
 | PWA + Android share target | `app/manifest.ts`, `app/icons/[size]/route.tsx`, `app/share/route.ts`, `lib/capture.ts` |
+| Auto-enrich links (AI summary) | `lib/enrich.ts`, `summarizeLink` in `lib/claude.ts`, `lib/capture.ts` |
+| Auto-tags + click-to-filter | `classify` in `lib/claude.ts`, `components/ItemCard.tsx`, `components/ItemList.tsx` |
 
 `lib/capture.ts` holds the shared capture core (classify + embed + insert), used by both the
 capture API and the share target. Cron routes (`/api/cron/*`) are exempt from the login gate in
@@ -72,10 +74,9 @@ The daily digest, weekly review, and Android "Share → Vira" only run on a depl
 
 ## Next (nice-to-have tier, from roadmap)
 
-- **#8 Auto-enrich links** — on `link` capture, fetch page → Claude adds title/summary/tags (standalone, no deps; mind SSRF).
-- **#9 Auto-tags** — classifier also emits 1–3 topic tags (nearly free, folds into the existing call).
-- **#10 Snooze / someday / recurring** — complements reminders.
-- **#7 Voice capture** · **#11 Plan-my-day** (calendar-gap suggestions).
+- **#10 Snooze / someday / recurring** — status + timestamp on reminders; complements what's built.
+- **#7 Voice capture** — mic → Web Speech → existing classify (Chrome-centric).
+- **#11 Plan-my-day** — calendar-gap suggestions (extends the day-suggestion you already ship).
 
 ## Known loose ends
 
