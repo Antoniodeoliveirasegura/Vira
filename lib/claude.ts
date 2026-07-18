@@ -11,6 +11,7 @@ type ClassifyResult = {
 export async function suggestDay(
   events: { summary: string; start: string; end: string; allDay: boolean }[],
   openTasks: { title: string }[],
+  gaps: { label: string; minutes: number }[] = [],
 ): Promise<string> {
   if (events.length === 0 && openTasks.length === 0) return '';
 
@@ -18,7 +19,7 @@ export async function suggestDay(
     const response = await client.messages.create({
       model: 'claude-haiku-4-5-20251001',
       max_tokens: 150,
-      system: `Given today's calendar events and the user's open tasks, write ONE short sentence suggesting how to use the day. Examples: point out a free gap that could fit a task, suggest which task to prioritize, note an unusually light or heavy schedule. Plain text. One sentence. No lists. No preamble — just the sentence itself, no quotes. If you genuinely have nothing useful to say, respond with the single word: SKIP`,
+      system: `Given today's calendar, the user's open tasks, and their remaining free time blocks, write ONE short, natural sentence suggesting how to use the day. When there are free blocks AND open tasks, prefer proposing a specific block for a specific task — e.g. "You're free 2–4 PM — good window to knock out <task>." Otherwise fall back to a useful observation: which task to prioritize, or an unusually light or heavy schedule. Plain text. One sentence. No lists. No preamble, no quotes. If you genuinely have nothing useful to say, respond with the single word: SKIP`,
       messages: [
         {
           role: 'user',
@@ -32,6 +33,10 @@ export async function suggestDay(
                   )
                   .join('\n')
               : '(none)'
+          }\n\nFree blocks left today:\n${
+            gaps.length
+              ? gaps.map((g) => `- ${g.label} (${g.minutes} min)`).join('\n')
+              : '(none available or calendar not connected)'
           }\n\nOpen tasks:\n${
             openTasks.length ? openTasks.map((t) => `- ${t.title}`).join('\n') : '(none)'
           }`,

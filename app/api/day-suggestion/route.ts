@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getTodayEvents, NotConnectedError } from '@/lib/google';
 import { getSupabase } from '@/lib/supabase';
 import { suggestDay } from '@/lib/claude';
+import { freeGaps } from '@/lib/plan';
 
 // TODO: This endpoint wasn't in the Phase 2 file list but is necessary —
 // keeps ANTHROPIC_API_KEY server-side instead of shipping it to the client.
@@ -27,6 +28,11 @@ export async function GET(req: NextRequest) {
     .eq('type', 'task')
     .eq('status', 'open');
 
-  const suggestion = await suggestDay(events, tasks ?? []);
+  const gaps = freeGaps(events, timeMin, new Date());
+  if (searchParams.get('debug')) {
+    return NextResponse.json({ gaps, eventCount: events.length });
+  }
+
+  const suggestion = await suggestDay(events, tasks ?? [], gaps);
   return NextResponse.json({ suggestion });
 }
