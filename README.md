@@ -1,5 +1,7 @@
 # Vira
 
+[![CI](https://github.com/Antoniodeoliveirasegura/Vira/actions/workflows/ci.yml/badge.svg)](https://github.com/Antoniodeoliveirasegura/Vira/actions/workflows/ci.yml)
+
 **Capture first. Organize later.**
 
 Vira is a single-user "capture-first" inbox. You dump a raw thought into one box and Claude turns it into a structured item (task, idea, link, reminder, note, or question) with a clean title and metadata, so capturing never breaks your flow. It also reads your Google Calendar and uses Claude to suggest how to spend your day.
