@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getSupabase, Item } from '@/lib/supabase';
 import { weeklyReview } from '@/lib/claude';
 import { dueLabel } from '@/lib/reminders';
+import { isSnoozed } from '@/lib/snooze';
 import { renderWeekly, sendWeekly } from '@/lib/email';
 
 const WEEK_MS = 7 * 24 * 60 * 60 * 1000;
@@ -31,7 +32,7 @@ export async function GET(req: NextRequest) {
     .map((i) => ({ title: i.title, type: i.type }));
 
   const open = items
-    .filter((i) => i.status === 'open')
+    .filter((i) => i.status === 'open' && !isSnoozed(i, now))
     .map((i) => ({ title: i.title, type: i.type, due: dueLabel(i, now) }));
 
   const review = await weeklyReview(captured, open);

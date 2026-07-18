@@ -4,6 +4,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { getSupabase, Item } from '@/lib/supabase';
 import { dueNow } from '@/lib/reminders';
 import { resurfaceCandidates } from '@/lib/resurface';
+import { isSnoozed } from '@/lib/snooze';
 import ItemCard from './ItemCard';
 import DueSection from './DueSection';
 import ResurfacePanel from './ResurfacePanel';
@@ -81,6 +82,24 @@ export default function ItemList({ newItem }: Props) {
     });
   }
 
+  // Snooze: hide until `until` (ISO), or wake now with null. Optimistically patch metadata.
+  async function handleSnooze(id: string, until: string | null) {
+    setItems((prev) =>
+      prev.map((i) => {
+        if (i.id !== id) return i;
+        const metadata = { ...i.metadata };
+        if (until) metadata.snoozed_until = until;
+        else delete metadata.snoozed_until;
+        return { ...i, metadata };
+      }),
+    );
+    await fetch('/api/items', {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ id, snooze_until: until }),
+    });
+  }
+
   if (loading) {
     return (
       <div className="flex items-center justify-center gap-2 py-12 text-sm text-zinc-600">
@@ -127,6 +146,7 @@ export default function ItemList({ newItem }: Props) {
               onDelete={handleDelete}
               onTagClick={setActiveTag}
               activeTag={activeTag}
+              onSnooze={handleSnooze}
             />
           ))}
         </div>
@@ -135,10 +155,11 @@ export default function ItemList({ newItem }: Props) {
   }
 
   // Overdue + due-today items get pinned to the top; the rest stay grouped by type.
-  const due = dueNow(items, now);
+  const due = dueNow(items, now); // already excludes snoozed
   const dueIds = new Set(due.map((i) => i.id));
-  const rest = items.filter((i) => !dueIds.has(i.id));
-  const resurface = resurfaceCandidates(items, now);
+  const snoozedItems = items.filter((i) => isSnoozed(i, now));
+  const rest = items.filter((i) => !dueIds.has(i.id) && !isSnoozed(i, now));
+  const resurface = resurfaceCandidates(items, now); // already excludes snoozed
 
   const grouped: Partial<Record<Item['type'], Item[]>> = {};
   for (const item of rest) {
@@ -156,7 +177,7 @@ export default function ItemList({ newItem }: Props) {
 
   return (
     <div className="space-y-10">
-      <DueSection due={due} now={now} onUpdate={handleUpdate} onDelete={handleDelete} />
+      <DueSection due={due} now={now} onUpdate={handleUpdate} onDelete={handleDelete} onSnooze={handleSnooze} />
       <ResurfacePanel
         candidates={resurface}
         onSurface={handleSurface}
@@ -179,11 +200,35 @@ export default function ItemList({ newItem }: Props) {
                 onUpdate={handleUpdate}
                 onDelete={handleDelete}
                 onTagClick={setActiveTag}
+                onSnooze={handleSnooze}
               />
             ))}
           </div>
         </section>
       ))}
+
+      {snoozedItems.length > 0 && (
+        <details>
+          <summary className="flex cursor-pointer list-none items-center gap-2 text-[11px] font-semibold uppercase tracking-[0.15em] text-zinc-500 transition-colors hover:text-zinc-300">
+            😴 Snoozed
+            <span className="rounded-full bg-zinc-800/80 px-1.5 py-0.5 text-[10px] font-medium tracking-normal text-zinc-400">
+              {snoozedItems.length}
+            </span>
+          </summary>
+          <div className="mt-3 space-y-2 opacity-70">
+            {snoozedItems.map((item) => (
+              <ItemCard
+                key={item.id}
+                item={item}
+                now={now}
+                onUpdate={handleUpdate}
+                onDelete={handleDelete}
+                onSnooze={handleSnooze}
+              />
+            ))}
+          </div>
+        </details>
+      )}
     </div>
   );
 }

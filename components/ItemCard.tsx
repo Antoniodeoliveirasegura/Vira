@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { Item } from '@/lib/supabase';
 import { bucketFor, dueLabel } from '@/lib/reminders';
+import { isSnoozed, snoozeLabel, snoozeOptions } from '@/lib/snooze';
 
 const TYPE_STYLES: Record<Item['type'], { badge: string; dot: string }> = {
   task:     { badge: 'bg-blue-500/10 text-blue-300 ring-blue-500/20',       dot: 'bg-blue-400' },
@@ -36,9 +37,10 @@ type Props = {
   now?: Date;
   onTagClick?: (tag: string) => void;
   activeTag?: string | null;
+  onSnooze?: (id: string, until: string | null) => void;
 };
 
-export default function ItemCard({ item, onUpdate, onDelete, now, onTagClick, activeTag }: Props) {
+export default function ItemCard({ item, onUpdate, onDelete, now, onTagClick, activeTag, onSnooze }: Props) {
   const isDone = item.status === 'done';
   const style = TYPE_STYLES[item.type];
   const at = now ?? new Date();
@@ -49,10 +51,12 @@ export default function ItemCard({ item, onUpdate, onDelete, now, onTagClick, ac
     (item.type === 'task' || item.type === 'reminder');
 
   const tags = (item.metadata.tags ?? '').split(',').map((t) => t.trim()).filter(Boolean);
+  const snoozed = isSnoozed(item, at);
 
   const [editing, setEditing] = useState(false);
   const [draft, setDraft] = useState(item.title);
   const [menuOpen, setMenuOpen] = useState(false);
+  const [snoozeOpen, setSnoozeOpen] = useState(false);
 
   function startEdit() {
     setDraft(item.title);
@@ -172,6 +176,9 @@ export default function ItemCard({ item, onUpdate, onDelete, now, onTagClick, ac
               · {dueLabel(item, at)}
             </span>
           )}
+          {snoozed && (
+            <span className="text-xs font-medium text-indigo-300">😴 {snoozeLabel(item, at)}</span>
+          )}
           {onTagClick &&
             tags.map((tag) => (
               <button
@@ -190,6 +197,55 @@ export default function ItemCard({ item, onUpdate, onDelete, now, onTagClick, ac
       </div>
 
       <div className="flex flex-shrink-0 items-center gap-1">
+        {!editing && onSnooze && item.status === 'open' && (
+          <div className="relative">
+            <button
+              onClick={() => setSnoozeOpen((o) => !o)}
+              className={`flex h-6 w-6 items-center justify-center rounded-md transition-all hover:bg-zinc-800 hover:text-indigo-300 ${
+                snoozed
+                  ? 'text-indigo-300 opacity-100'
+                  : 'text-zinc-600 opacity-60 hover:opacity-100 sm:opacity-0 sm:group-hover:opacity-100'
+              }`}
+              aria-label="Snooze"
+              title="Snooze"
+            >
+              <svg className="h-3.5 w-3.5" viewBox="0 0 14 14" fill="none">
+                <circle cx="7" cy="7" r="5.5" stroke="currentColor" strokeWidth="1.3" />
+                <path d="M7 4V7L9 8.5" stroke="currentColor" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round" />
+              </svg>
+            </button>
+            {snoozeOpen && (
+              <>
+                <div className="fixed inset-0 z-10" onClick={() => setSnoozeOpen(false)} />
+                <div className="absolute right-0 top-full z-20 mt-1 w-36 overflow-hidden rounded-lg border border-zinc-700 bg-zinc-900 py-1 shadow-xl">
+                  {snoozed && (
+                    <button
+                      onClick={() => {
+                        setSnoozeOpen(false);
+                        onSnooze(item.id, null);
+                      }}
+                      className="flex w-full items-center gap-2 px-3 py-1.5 text-left text-xs text-indigo-300 transition-colors hover:bg-zinc-800"
+                    >
+                      ⏰ Wake now
+                    </button>
+                  )}
+                  {snoozeOptions(at).map((o) => (
+                    <button
+                      key={o.label}
+                      onClick={() => {
+                        setSnoozeOpen(false);
+                        onSnooze(item.id, o.until);
+                      }}
+                      className="flex w-full items-center px-3 py-1.5 text-left text-xs text-zinc-300 transition-colors hover:bg-zinc-800"
+                    >
+                      {o.label}
+                    </button>
+                  ))}
+                </div>
+              </>
+            )}
+          </div>
+        )}
         {!editing && (
           <button
             onClick={startEdit}

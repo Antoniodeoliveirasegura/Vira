@@ -1,4 +1,5 @@
 import { Item } from './supabase';
+import { isSnoozed } from './snooze';
 
 const DAY = 24 * 60 * 60 * 1000;
 const MIN_AGE_DAYS = 3; // don't resurface fresh captures — give them time to be acted on
@@ -16,6 +17,7 @@ export function resurfaceCandidates(items: Item[], now: Date, limit = 5): Item[]
   return items
     .filter((i) => {
       if (i.status !== 'open') return false;
+      if (isSnoozed(i, now)) return false; // snoozed items are hidden until they return
       if (i.metadata?.due_date) return false; // reminders own dated items
       if (nowMs - new Date(i.created_at).getTime() < MIN_AGE_DAYS * DAY) return false;
       return nowMs - surfacedMs(i) > COOLDOWN_DAYS * DAY;

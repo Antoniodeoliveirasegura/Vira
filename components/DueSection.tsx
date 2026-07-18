@@ -12,9 +12,10 @@ type Props = {
   now: Date;
   onUpdate: (id: string, updates: Partial<Item>) => void;
   onDelete: (id: string) => void;
+  onSnooze: (id: string, until: string | null) => void;
 };
 
-export default function DueSection({ due, now, onUpdate, onDelete }: Props) {
+export default function DueSection({ due, now, onUpdate, onDelete, onSnooze }: Props) {
   const [perm, setPerm] = useState<NotificationPermission>('default');
 
   useEffect(() => {
@@ -76,7 +77,7 @@ export default function DueSection({ due, now, onUpdate, onDelete }: Props) {
       </div>
       <div className="space-y-2">
         {due.map((item) => (
-          <ItemCard key={item.id} item={item} now={now} onUpdate={onUpdate} onDelete={onDelete} />
+          <ItemCard key={item.id} item={item} now={now} onUpdate={onUpdate} onDelete={onDelete} onSnooze={onSnooze} />
         ))}
       </div>
     </section>

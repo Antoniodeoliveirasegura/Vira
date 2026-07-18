@@ -37,6 +37,17 @@ export async function PATCH(req: NextRequest) {
   if (body.surfaced === true) {
     updates.last_surfaced_at = new Date().toISOString(); // server-authoritative timestamp
   }
+  if (body.snooze_until !== undefined) {
+    if (body.snooze_until !== null && isNaN(new Date(body.snooze_until).getTime())) {
+      return NextResponse.json({ error: 'invalid snooze_until' }, { status: 400 });
+    }
+    // Read-merge-write metadata so we set/clear just snoozed_until without clobbering url/tags/due_date.
+    const { data: current } = await getSupabase().from('items').select('metadata').eq('id', id).single();
+    const metadata: Record<string, unknown> = { ...(current?.metadata ?? {}) };
+    if (body.snooze_until === null) delete metadata.snoozed_until;
+    else metadata.snoozed_until = new Date(body.snooze_until).toISOString();
+    updates.metadata = metadata;
+  }
 
   if (Object.keys(updates).length === 0) {
     return NextResponse.json({ error: 'no editable fields provided' }, { status: 400 });

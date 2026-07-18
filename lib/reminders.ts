@@ -1,4 +1,5 @@
 import { Item } from './supabase';
+import { isSnoozed } from './snooze';
 
 // Tasks and reminders can carry a due date/time in metadata.due_date — an ISO 8601
 // string that is either a date ("2026-07-20") or a datetime ("2026-07-20T18:00").
@@ -57,6 +58,7 @@ export function bucketFor(item: Item, now: Date): DueBucket | null {
 export function dueNow(items: Item[], now: Date): Item[] {
   return items
     .filter((i) => {
+      if (isSnoozed(i, now)) return false;
       const b = bucketFor(i, now);
       return b === 'overdue' || b === 'today';
     })
