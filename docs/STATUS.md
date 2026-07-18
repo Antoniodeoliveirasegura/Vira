@@ -69,7 +69,9 @@ OS can fetch them at install.
 
 ## Deploy to activate the async features
 
-The daily digest, weekly review, and Android "Share → Vira" only run on a deployed HTTPS host:
+The daily digest, weekly review, and Android "Share → Vira" only run on a deployed HTTPS host —
+see **[DEPLOY.md](DEPLOY.md)** for the full step-by-step (env vars, the Supabase redirect gotcha,
+cron notes). Quick version:
 
 1. Get a **Resend** API key (free tier emails your own address from `onboarding@resend.dev`).
 2. Import the GitHub repo into **Vercel** (~2 min for a Next app).
