@@ -1,6 +1,6 @@
 'use client';
 
-import { Item } from '@/lib/supabase';
+import type { Item } from '@/lib/types';
 
 const DOT: Record<Item['type'], string> = {
   task: 'bg-blue-400',

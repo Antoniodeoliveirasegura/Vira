@@ -20,7 +20,8 @@ Secrets live in `.env.local` (gitignored). Keys:
 |---|---|
 | `ANTHROPIC_API_KEY` | classify, synthesized answers, weekly review (Haiku) |
 | `VOYAGE_API_KEY` | embeddings (`voyage-4-lite`, free tier) |
-| `NEXT_PUBLIC_SUPABASE_URL` / `NEXT_PUBLIC_SUPABASE_ANON_KEY` | DB |
+| `NEXT_PUBLIC_SUPABASE_URL` / `SUPABASE_SECRET_KEY` | DB (server-only client) |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | browser, Calendar OAuth handshake only |
 | `GOOGLE_CLIENT_ID` / `GOOGLE_CLIENT_SECRET` | Calendar (Supabase-brokered OAuth) |
 | `APP_PASSWORD` | the login gate — **this is the "forgot password" reset** |
 | `APP_SESSION_SECRET` | signs the `vira_auth` cookie = HMAC-SHA256(secret, password) |
@@ -38,10 +39,10 @@ Supabase (`@supabase/ssr`, pgvector) · Claude `claude-haiku-4-5-20251001` · Vo
 - `items` — id, created_at, raw_input, type (task/idea/link/reminder/note/question),
   title, status (open/done/archived), metadata jsonb, `last_surfaced_at`, `embedding vector(1024)`
 - `google_tokens` — refresh_token
-- RLS **on** with permissive `anon` policies (`vira items access` / `vira tokens access`)
+- RLS **on**, no policies, no `anon`/`authenticated` grants (`supabase/migrations/20261106000000_lock_down_anon_access.sql`); only the server's secret key reaches the tables
 - pgvector extension + HNSW index + `match_items(query_embedding, match_count)` RPC
 
-No pending migrations. Schema and code are in sync.
+Pending: the lockdown migration above, applied after `SUPABASE_SECRET_KEY` is deployed (see DEPLOY.md).
 
 ## Shipped
 

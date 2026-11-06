@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { Item } from '@/lib/supabase';
+import type { Item } from '@/lib/types';
 import { bucketFor, dueLabel } from '@/lib/reminders';
 import { isSnoozed, snoozeLabel, snoozeOptions } from '@/lib/snooze';
 

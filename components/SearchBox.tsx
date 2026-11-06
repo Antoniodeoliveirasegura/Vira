@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, type FormEvent } from 'react';
-import { Item } from '@/lib/supabase';
+import type { Item } from '@/lib/types';
 
 type Result = Item & { similarity: number };
 

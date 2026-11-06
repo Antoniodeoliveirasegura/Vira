@@ -6,7 +6,7 @@ import ItemList from '@/components/ItemList';
 import CalendarStrip from '@/components/CalendarStrip';
 import DaySuggestion from '@/components/DaySuggestion';
 import SearchBox from '@/components/SearchBox';
-import { Item } from '@/lib/supabase';
+import type { Item } from '@/lib/types';
 
 export default function Home() {
   const [latestItem, setLatestItem] = useState<Item | null>(null);

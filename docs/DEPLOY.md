@@ -36,6 +36,7 @@ annotated list.)
 | `VOYAGE_API_KEY` | Same as local. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Same as local (Supabase is already hosted — no change). |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Same as local. |
+| `SUPABASE_SECRET_KEY` | Supabase secret (service role) key. Server-only; the app's database client uses it. |
 | `GOOGLE_CLIENT_ID` | Same as local. |
 | `GOOGLE_CLIENT_SECRET` | Same as local. |
 | `APP_PASSWORD` | Your login password. |
@@ -99,3 +100,18 @@ invocations, which the routes verify.
 
 Rotate the **Anthropic** and **Supabase** secret keys that were pasted in chat during setup, and
 update them in both `.env.local` and Vercel. (The Voyage key was only ever in `.env.local`.)
+
+---
+
+## Database access (lockdown, Nov 2026)
+
+The browser has no direct database access: every read and write goes through the `/api/*` route
+handlers, which use `SUPABASE_SECRET_KEY`. The public anon key is only used for the Calendar OAuth
+handshake. Order matters when applying this to an existing deploy:
+
+1. Supabase dashboard > **Project Settings > API Keys**: copy the secret key (create a new one if the
+   old one was ever pasted anywhere, then revoke the old one).
+2. Vercel > **Settings > Environment Variables**: add `SUPABASE_SECRET_KEY` for Production and Preview.
+3. Deploy, and check the inbox still loads.
+4. Supabase > **SQL Editor**: run `supabase/migrations/20261106000000_lock_down_anon_access.sql`.
+   Running it before step 3 makes the live app show an empty inbox until the deploy lands.
