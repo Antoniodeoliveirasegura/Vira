@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Item } from '@/lib/supabase';
+import type { Item } from '@/lib/types';
 import { bucketFor, isRipe } from '@/lib/reminders';
 import ItemCard from './ItemCard';
 

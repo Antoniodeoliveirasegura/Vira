@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useRef, useEffect, KeyboardEvent } from 'react';
-import { Item } from '@/lib/supabase';
+import type { Item } from '@/lib/types';
 
 // Minimal shape of the Web Speech API we use (not in the standard TS DOM lib). Chrome/Edge/
 // Safari expose it (webkit-prefixed); Firefox doesn't, so the mic button hides where absent.

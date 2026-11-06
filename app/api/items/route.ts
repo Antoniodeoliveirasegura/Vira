@@ -4,6 +4,22 @@ import { getSupabase } from '@/lib/supabase';
 const ITEM_TYPES = ['task', 'idea', 'link', 'reminder', 'note', 'question'];
 const ITEM_STATUSES = ['open', 'done', 'archived'];
 
+// The inbox list. The embedding column is left out: the client never uses it and it's
+// 1024 floats per row.
+export async function GET() {
+  const { data, error } = await getSupabase()
+    .from('items')
+    .select('id, created_at, raw_input, type, title, status, metadata, last_surfaced_at')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('Supabase list error:', error);
+    return NextResponse.json({ error: 'Failed to load items' }, { status: 500 });
+  }
+
+  return NextResponse.json(data ?? []);
+}
+
 export async function PATCH(req: NextRequest) {
   const body = await req.json().catch(() => ({}));
   const { id } = body;

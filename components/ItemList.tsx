@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState, useCallback } from 'react';
-import { getSupabase, Item } from '@/lib/supabase';
+import type { Item } from '@/lib/types';
 import { dueNow } from '@/lib/reminders';
 import { resurfaceCandidates } from '@/lib/resurface';
 import { isSnoozed } from '@/lib/snooze';
@@ -37,11 +37,9 @@ export default function ItemList({ newItem }: Props) {
   }, []);
 
   const fetchItems = useCallback(async () => {
-    const { data } = await getSupabase()
-      .from('items')
-      .select('*')
-      .order('created_at', { ascending: false });
-    if (data) setItems(data as Item[]);
+    // Through the server route: the browser has no direct database access.
+    const res = await fetch('/api/items');
+    if (res.ok) setItems((await res.json()) as Item[]);
     setLoading(false);
   }, []);
 
